@@ -47,3 +47,35 @@ GRANT SELECT ON CDB_TEMP_FILES TO <DYNATRACE_USER>;
 GRANT SELECT ON CDB_DATA_FILES TO <DYNATRACE_USER>;
 GRANT SELECT ON CDB_TABLESPACES TO <DYNATRACE_USER>;
 GRANT SELECT ON CDB_TABLESPACE_USAGE_METRICS TO <DYNATRACE_USER>;
+
+
+-- RAC only. This section will create an ACL and grant the Dynatrace user
+-- permissions to query the local IP of each instance. This is used to establish
+-- the relationship between OneAgent detected hosts and the database instances.
+-- Feel free to comment this section out if you are not running a multi-instance setup.
+
+BEGIN
+  DBMS_NETWORK_ACL_ADMIN.create_acl (
+    acl          => 'dynatrace.xml', 
+    description  => 'Allow DNS resolution checks to get RAC node IP addresses',
+    principal    => '<DYNATRACE_USER>',
+    is_grant     => TRUE, 
+    privilege    => 'resolve',
+    start_date   => SYSTIMESTAMP,
+    end_date     => NULL);
+    
+        FOR instance_host IN (
+        SELECT DISTINCT host_name
+    FROM gv$instance -- Retrieves all RAC node hostnames
+  ) LOOP
+    DBMS_NETWORK_ACL_ADMIN.assign_acl (
+      acl         => 'dynatrace.xml',
+      host        => instance_host.host_name, -- Assign ACL to each instance host
+      lower_port  => NULL,
+      upper_port  => NULL
+    );
+  END LOOP;
+
+  COMMIT;
+END;
+/

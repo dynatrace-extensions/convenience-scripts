@@ -67,3 +67,35 @@ ALTER USER <DYNATRACE_USER> SET CONTAINER_DATA=ALL FOR SYS.CDB_TEMP_FILES  CONTA
 ALTER USER <DYNATRACE_USER> SET CONTAINER_DATA=ALL FOR SYS.CDB_DATA_FILES CONTAINER = CURRENT;
 ALTER USER <DYNATRACE_USER> SET CONTAINER_DATA=ALL FOR SYS.CDB_TABLESPACES CONTAINER = CURRENT;
 ALTER USER <DYNATRACE_USER> SET CONTAINER_DATA=ALL FOR SYS.CDB_TABLESPACE_USAGE_METRICS CONTAINER = CURRENT;
+
+
+-- RAC only. This section will create an ACL and grant the Dynatrace user
+-- permissions to query the local IP of each instance. This is used to establish
+-- the relationship between OneAgent detected hosts and the database instances.
+-- Feel free to comment this section out if you are not running a multi-instance setup.
+
+BEGIN
+  DBMS_NETWORK_ACL_ADMIN.create_acl (
+    acl          => 'dynatrace.xml', 
+    description  => 'Allow DNS resolution checks to get RAC node IP addresses',
+    principal    => '<DYNATRACE_USER>',
+    is_grant     => TRUE, 
+    privilege    => 'resolve',
+    start_date   => SYSTIMESTAMP,
+    end_date     => NULL);
+    
+        FOR instance_host IN (
+        SELECT DISTINCT host_name
+    FROM gv$instance -- Retrieves all RAC node hostnames
+  ) LOOP
+    DBMS_NETWORK_ACL_ADMIN.assign_acl (
+      acl         => 'dynatrace.xml',
+      host        => instance_host.host_name, -- Assign ACL to each instance host
+      lower_port  => NULL,
+      upper_port  => NULL
+    );
+  END LOOP;
+
+  COMMIT;
+END;
+/

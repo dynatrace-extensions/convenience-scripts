@@ -11,6 +11,6 @@ The scripts [user_setup_multitenant.sql][user_setup_multitenant_link] and [user_
 
 Before running the scripts, ensure that you replace `<DYNATRACE_USER>` and `<PASSWORD>` with the appropriate values. 
 
-[hub tile]: https://www.dynatrace.com/hub/detail/oracle-database/
+[hub tile]: https://docs.dynatrace.com/docs/observe/infrastructure-observability/databases/extensions/oracle-database
 [user_setup_multitenant_link]: user_setup_multitenant.sql
 [user_setup_nonmultitenant_link]: user_setup_nonmultitenant.sql
